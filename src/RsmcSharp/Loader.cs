@@ -12,6 +12,8 @@ internal static class NativeLoader
     private static bool _registered;
     public static bool DetectOptimized { get; set; } = false;
 
+    private static readonly Lock NativeLoaderLock = new();
+
     public static void SetLibraryPath(string path)
     {
         _customPath = Directory.Exists(path)
@@ -21,16 +23,19 @@ internal static class NativeLoader
 
     internal static void EnsureRegistered()
     {
-        if (_registered) return;
-        NativeLibrary.SetDllImportResolver(typeof(NativeLoader).Assembly, Resolve);
-        _registered = true;
+        lock(NativeLoaderLock)
+        {
+            if (_registered) return;
+            NativeLibrary.SetDllImportResolver(typeof(NativeLoader).Assembly, Resolve);
+            _registered = true;
+        }
     }
 
     private static IntPtr Resolve(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
     {
         if (libraryName != LibraryName)
             return IntPtr.Zero;
-        
+
         IntPtr handle;
 
         if (!string.IsNullOrEmpty(_customPath) && NativeLibrary.TryLoad(_customPath, out handle))
