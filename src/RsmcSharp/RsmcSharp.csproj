@@ -21,10 +21,20 @@
               Pack="true"
               PackagePath="runtimes/win-x64/native/"
               CopyToOutputDirectory="PreserveNewest" />
+        
+        <None Include="runtimes/win-x64-v3/native/rsmc.dll"
+              Pack="true"
+              PackagePath="runtimes/win-x64-v3/native/"
+              CopyToOutputDirectory="PreserveNewest" />
 
         <None Include="runtimes/linux-x64/native/librsmc.so"
               Pack="true"
               PackagePath="runtimes/linux-x64/native/"
+              CopyToOutputDirectory="PreserveNewest" />
+
+        <None Include="runtimes/linux-x64-v3/native/librsmc.so"
+              Pack="true"
+              PackagePath="runtimes/linux-x64-v3/native/"
               CopyToOutputDirectory="PreserveNewest" />
         
         <None Include="runtimes/win-arm64/native/rsmc.dll"
@@ -46,6 +56,10 @@
               Pack="true"
               PackagePath="runtimes/osx-x64/native/"
               CopyToOutputDirectory="PreserveNewest" />
-    </ItemGroup>
 
+        <None Include="runtimes/osx-x64-v3/native/librsmc.dylib"
+              Pack="true"
+              PackagePath="runtimes/osx-x64-v3/native/"
+              CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
 </Project>
