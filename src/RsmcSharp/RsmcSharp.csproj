@@ -7,9 +7,9 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         
         <PackageId>RsmcSharp</PackageId>
-        <Version>0.1.0-beta</Version>
+        <Version>1.0.0-alpha.1</Version>
         <Authors>01eksa</Authors>
-        <Description>Fast and simple Reversi stateless model. C# wrapper over rsmc v0.1.0 (see https://github.com/01eksa/rsmc).</Description>
+        <Description>Fast and simple Reversi stateless model. C# wrapper over rsmc v1.0.0 (see https://github.com/01eksa/rsmc).</Description>
         <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
         <RepositoryUrl>https://github.com/01eksa/rsmcsharp</RepositoryUrl>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
