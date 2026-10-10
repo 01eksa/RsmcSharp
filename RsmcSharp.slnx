@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="src\RsmcSharp\RsmcSharp.csproj" />
+  <Project Path="tests/RsmcSharp.Tests/RsmcSharp.Tests.csproj" />
 </Solution>
