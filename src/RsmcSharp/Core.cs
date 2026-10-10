@@ -4,6 +4,78 @@ using System.Runtime.InteropServices;
 namespace RsmcSharp;
 
 /// <summary>
+/// Struct that represents RsmcBitMap from native library.
+/// </summary>
+/// <remarks>
+/// Constructor from ulong.
+/// </remarks>
+/// <param name="bitmap">ulong that represents bit map.</param>
+[StructLayout(LayoutKind.Sequential)]
+public struct BitMap(ulong bitmap)
+{
+    /// <summary>
+    /// Bit map stored as ulong.
+    /// </summary>
+    public ulong Value { get; set; } = bitmap;
+
+    /// <summary>
+    /// Implicit conversion to ulong.
+    /// </summary>
+    /// <param name="bitmap">BitMap to convert.</param>
+    public static implicit operator ulong(BitMap bitmap) => bitmap.Value;
+    /// <summary>
+    /// Implicit conversion from ulong.
+    /// </summary>
+    /// <param name="bitmap">Bit map stored as ulong.</param>
+    public static implicit operator BitMap(ulong bitmap) => new(bitmap);
+}
+
+/// <summary>
+/// Struct that represents RsmcBitMask from native library.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public readonly struct BitMask
+{
+    /// <summary>
+    /// Bit mask stored as ulong.
+    /// </summary>
+    public ulong Value { get; init; }
+
+    /// <summary>
+    /// Creates BitMask from ulong.
+    /// </summary>
+    /// <param name="mask">Bit mask stored as ulong.</param>
+    public BitMask(ulong mask)
+    {
+        Value = mask;
+    }
+
+    /// <summary>
+    /// Creates BitMask from coordinates.
+    /// </summary>
+    /// <param name="x"> x (column). </param>
+    /// <param name="y"> y (row). </param>
+    /// <exception cref="InvalidCoordsException"> Coords are out of range. </exception>
+    public BitMask(int x, int y)
+    {
+        if ((uint)y > Board.MaxCoord || (uint)x > Board.MaxCoord)
+            throw new InvalidCoordsException($"Coords must be in {Board.MinCoord}..{Board.MaxCoord}");
+        var index = y * Board.Size + x;
+        Value = 1ul << index;
+    }
+    /// <summary>
+    /// Implicit conversion to ulong.
+    /// </summary>
+    /// <param name="mask">BitMask to convert.</param>
+    public static implicit operator ulong(BitMask mask) => mask.Value;
+    /// <summary>
+    /// Implicit conversion from ulong.
+    /// </summary>
+    /// <param name="value">Bit mask stored as ulong.</param>
+    public static implicit operator BitMask(ulong value) => new(value);
+}
+
+/// <summary>
 /// Represents players color.
 /// </summary>
 public enum Player : byte
@@ -145,12 +217,76 @@ public record struct Coords(sbyte X, sbyte Y)
 /// Represents game board.
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
-public struct Board
+public record struct Board
 {
+    /// <summary>
+    /// BitMap that stores black pieces.
+    /// </summary>
+    public BitMap Black { get; init; }
+    /// <summary>
+    /// BitMap that stores white pieces.
+    /// </summary>
+    public BitMap White { get; init; }
+
+    /// <summary>
+    /// Creates Board from two BitMap.
+    /// </summary>
+    /// <param name="black">BitMap that stores black pieces.</param>
+    /// <param name="white">BitMap that stores white pieces.</param>
+    public Board(BitMap black, BitMap white)
+    {
+        Black = black;
+        White = white;
+    }
+
+    /// <summary>
+    /// Creates Board from BoardCell 2-dim array.
+    /// </summary>
+    /// <param name="cells">Cells that represents board.</param>
+    /// <exception cref="ArgumentOutOfRangeException">One of dimensions doesn't match size.</exception>
+    public Board(BoardCell[,] cells)
+    {
+        if (cells.GetLength(0) != Size || cells.GetLength(1) != Size)
+        {
+            throw new ArgumentOutOfRangeException();
+        }
+
+        BitMap black = 0;
+        BitMap white = 0;
+
+
+        for (var y = 0; y < Size; y++)
+        {
+            for (var x = 0; x < Size; x++)
+            {
+                switch (cells[y, x])
+                {
+                    case BoardCell.Black:
+                        black |= new BitMask(x, y);
+                        break;
+                    case BoardCell.White:
+                        white |= new BitMask(x, y);
+                        break;
+                    case BoardCell.Empty:
+                    default:
+                        continue;
+                }
+            }
+        }
+
+        Black = black;
+        White = white;
+    }
+
     /// <summary>
     /// One dimesion size.
     /// </summary>
     public const int Size = 8;
+
+    /// <summary>
+    /// Total number of cells.
+    /// </summary>
+    public const int Area = Size * Size;
 
     /// <summary>
     /// Min coord.
@@ -160,16 +296,7 @@ public struct Board
     /// <summary>
     /// Max coord.
     /// </summary>
-    public const int MaxCoord = Size - 1 - MinCoord;
-
-    [StructLayout(LayoutKind.Sequential)]
-    [InlineArray(Size * Size)]
-    private struct Cells
-    {
-        private BoardCell _;
-    }
-
-    private Cells _cells;
+    public const int MaxCoord = MinCoord + Size - 1 - MinCoord;
 
     /// <summary>
     /// Returns <see cref="BoardCell"/> on given coords.
@@ -177,10 +304,24 @@ public struct Board
     /// <param name="row">Y coord.</param>
     /// <param name="col">X coord.</param>
     /// <exception cref="InvalidCoordsException">Throws if any coord is out of range <see cref="MinCoord"/>..<see cref="MaxCoord"/></exception>
-    public BoardCell this[int row, int col]
+    public readonly BoardCell this[int row, int col]
     {
-        get => _cells[Index(row, col)];
-        set => _cells[Index(row, col)] = value;
+        get
+        {
+            var mask = new BitMask(col, row);
+
+            if ((Black & mask) != 0)
+            {
+                return BoardCell.Black;
+            }
+
+            if ((White & mask) != 0)
+            {
+                return BoardCell.White;
+            }
+
+            return BoardCell.Empty;
+        }
     }
 
     /// <summary>
@@ -188,86 +329,84 @@ public struct Board
     /// </summary>
     /// <param name="coords"><see cref="Coords"/></param>
     /// <exception cref="InvalidCoordsException">Throws if any coord is out of range <see cref="MinCoord"/>..<see cref="MaxCoord"/></exception>
-    public BoardCell this[Coords coords]
-    {
-        get => this[coords.Y, coords.X];
-        set => this[coords.Y, coords.X] = value;
-    }
-
-    /// <summary>
-    /// Validates coords and converts them to one-dimension index.
-    /// </summary>
-    /// <param name="row">Y coord.</param>
-    /// <param name="col">X coord.</param>
-    /// <returns>One-dimension index.</returns>
-    /// <exception cref="InvalidCoordsException">Throws if any coord is out of range <see cref="MinCoord"/>..<see cref="MaxCoord"/></exception>
-    private static int Index(int row, int col)
-    {
-        if ((uint)row > MaxCoord || (uint)col > MaxCoord)
-            throw new InvalidCoordsException($"Coords must be in {MinCoord}..{MaxCoord}");
-        return row * Size + col;
-    }
+    public BoardCell this[Coords coords] => this[coords.Y, coords.X];
 }
 
 /// <summary>
-/// Represents possible moves.
+/// Represents native rsmc library version.
 /// </summary>
-[StructLayout(LayoutKind.Sequential)]
-public struct Moves
+/// <param name="Encoded">Version packed into uint.</param>
+public record struct Version(uint Encoded)
 {
     /// <summary>
-    /// The maximum number of valid moves.
-    /// Proven by Takizawa, Hiroki in 2023.
+    /// Major version.
     /// </summary>
-    public const int MaxValidMoves = 34;
+    public readonly byte Major => (byte)(Encoded >> 24);
+    /// <summary>
+    /// Minor version.
+    /// </summary>
+    public readonly byte Minor => (byte)(Encoded >> 16);
+    /// <summary>
+    /// Patch version.
+    /// </summary>
+    public readonly ushort Patch => (ushort)Encoded;
 
     /// <summary>
-    /// The number of moves.
+    /// Creates <see cref="Version"/> from Major-Minor-Patch values.
     /// </summary>
-    public byte Count;
+    /// <param name="Major">Major version.</param>
+    /// <param name="Minor">Minor version.</param>
+    /// <param name="Patch">Patch version.</param>
+    public Version(byte Major, byte Minor, ushort Patch) : this(((uint)Major << 24) | ((uint)Minor << 16) | (uint)Patch) {}
 
     /// <summary>
-    /// A buffer of possible move coordinates. Only the first <see cref="Count"/> elements are valid.
+    /// Compares two versions of rsmc library.
     /// </summary>
-    public CoordsBuffer Coords;
-
-    /// <summary>
-    /// Represents a fixed-size inline buffer of <see cref="Coords"/> used to store valid moves without heap allocations.
-    /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
-    [InlineArray(MaxValidMoves)]
-    public struct CoordsBuffer
+    /// <param name="left">Left operand.</param>
+    /// <param name="right">Right operand.</param>
+    /// <returns>True if right operand is greater, else false.</returns>
+    public static bool operator <(Version left, Version right)
     {
-        private Coords _;
+        return left.Encoded < right.Encoded;
     }
 
     /// <summary>
-    /// Returns an enumerator that iterates through the valid moves.
+    /// Compares two versions of rsmc library.
     /// </summary>
-    /// <returns>
-    /// An <see cref="IEnumerator{T}"/> that can be used to iterate through the collection of valid moves.
-    /// </returns>
-    public IEnumerator<Coords> GetEnumerator()
+    /// <param name="left">Left operand.</param>
+    /// <param name="right">Right operand.</param>
+    /// <returns>True if right operand is greater or equal, else false.</returns>
+    public static bool operator <=(Version left, Version right)
     {
-        for (var i = 0; i < Count; i++)
-        {
-            yield return Coords[i];
-        }
+        return left.Encoded <= right.Encoded;
     }
 
     /// <summary>
-    /// Determines whether the collection contains the specified coordinates.
+    /// Compares two versions of rsmc library.
     /// </summary>
-    /// <param name="coords">The <see cref="Coords"/> to locate in the collection.</param>
-    /// <returns><c>true</c> if the specified <see cref="Coords"/> is found; otherwise, <c>false</c>.</returns>
-    public bool Contains(Coords coords)
+    /// <param name="left">Left operand.</param>
+    /// <param name="right">Right operand.</param>
+    /// <returns>True if left operand is greater, else false.</returns>
+    public static bool operator >(Version left, Version right)
     {
-        for (var i = 0; i < Count; i++)
-        {
-            if (Coords[i] == coords)
-                return true;
-        }
-
-        return false;
+        return left.Encoded > right.Encoded;
     }
+
+    /// <summary>
+    /// Compares two versions of rsmc library.
+    /// </summary>
+    /// <param name="left">Left operand.</param>
+    /// <param name="right">Right operand.</param>
+    /// <returns>True if left operand is greater or equal, else false.</returns>
+    public static bool operator >=(Version left, Version right)
+    {
+        return left.Encoded >= right.Encoded;
+    }
+
+    /// <summary>
+    /// Converts version to human-readeble tag in format vMAJOR.MINOR.PATCH
+    /// </summary>
+    /// <returns>Human-readable version tag.</returns>
+    public override readonly string ToString() => $"v{Major}.{Minor}.{Patch}";
+
 }

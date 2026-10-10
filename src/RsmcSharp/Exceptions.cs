@@ -17,3 +17,9 @@ public class InvalidCoordsException(string message = "", Exception? inner = null
 /// </summary>
 public class InvalidMoveException(string message = "", Exception? inner = null)
     : RsmcException(message, inner);
+    
+/// <summary>
+/// Throws when native library version is not supported
+/// </summary>
+public class UnsupportedVersionException(string message = "", Exception? inner = null)
+    : RsmcException(message, inner);
