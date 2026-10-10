@@ -110,14 +110,27 @@ internal static class NativeLoader
 }
 
 /// <summary>
-/// Manage rsmc native library.
+/// Configures how the native <c>rsmc</c> library is located and loaded.
 /// </summary>
+/// <remarks>
+/// Settings must be applied before the first access to <see cref="Rsmc"/>, because the library is resolved once, on first use.
+/// <para>
+/// The library is searched in the following order:
+/// the path set by <see cref="UseLibraryAt"/>; the path from the <c>RSMC_NATIVE_LIB_PATH</c> environment variable;
+/// the optimized binaries in <c>runtimes/{rid}/native</c> (only if <see cref="UseNativeOptimization"/> is enabled);
+/// the default system probing; and finally the regular binaries in <c>runtimes/{rid}/native</c>.
+/// </para>
+/// </remarks>
 public static class RsmcNative
 {
     /// <summary>
-    /// Decide if you want to use native optimization.
-    /// For v1.0.0 it uses x86-64-v3 binaries if your hardware supports it.
+    /// Gets or sets whether optimized native binaries should be preferred.
+    /// Disabled by default.
     /// </summary>
+    /// <remarks>
+    /// For v1.0.0 the optimized binaries target x86-64-v3 and are used only on x64 processors that support it;
+    /// otherwise the regular binaries are used.
+    /// </remarks>
     public static bool UseNativeOptimization
     {
         get => DetectOptimized;
@@ -125,9 +138,12 @@ public static class RsmcNative
     }
 
     /// <summary>
-    /// Sets custom path to the rsmc native library.
+    /// Sets a custom path to the native rsmc library. This path has the highest priority.
     /// </summary>
-    /// <param name="path">Path to the library file.</param>
+    /// <param name="path">
+    /// Path to the library file, or to a directory that contains it
+    /// (the platform-specific file name is appended automatically).
+    /// </param>
     public static void UseLibraryAt(string path)
     {
         SetLibraryPath(path);

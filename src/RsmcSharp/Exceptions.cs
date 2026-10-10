@@ -1,25 +1,25 @@
 namespace RsmcSharp;
 
 /// <summary>
-/// Represents errors in Rsmcsharp library.
+/// Base class for errors in the RsmcSharp library.
 /// </summary>
 public class RsmcException(string message, Exception? inner = null)
     : Exception(message, inner);
 
 /// <summary>
-/// Throws when you try to access invalid coords on the <see cref="Board"/>.
+/// Thrown when accessing coordinates that are outside the <see cref="Board"/>.
 /// </summary>
 public class InvalidCoordsException(string message = "", Exception? inner = null)
     : RsmcException(message, inner);
 
 /// <summary>
-/// Throws when you try to make an impossible move.
+/// Thrown when an impossible move is attempted.
 /// </summary>
 public class InvalidMoveException(string message = "", Exception? inner = null)
     : RsmcException(message, inner);
-    
+
 /// <summary>
-/// Throws when native library version is not supported
+/// Thrown when the version of the native library is not supported.
 /// </summary>
 public class UnsupportedVersionException(string message = "", Exception? inner = null)
     : RsmcException(message, inner);

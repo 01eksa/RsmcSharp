@@ -5,6 +5,12 @@ namespace RsmcSharp;
 /// <summary>
 /// Provides a managed API wrapper and P/Invoke bindings for interacting with the native <c>rsmc</c> library.
 /// </summary>
+/// <remarks>
+/// The native library is loaded and its version is checked on the first access to this class.
+/// If the check fails, an <see cref="UnsupportedVersionException"/> is thrown from the static constructor,
+/// so callers observe it as the <see cref="Exception.InnerException"/> of a <see cref="TypeInitializationException"/>.
+/// Configure the library location with <see cref="RsmcNative"/> before the first access.
+/// </remarks>
 public static partial class Rsmc
 {
     static Rsmc()
@@ -34,17 +40,24 @@ public static partial class Rsmc
     }
 
     /// <summary>
-    /// Cached start position for Reversi.
+    /// Cached initial position of Reversi.
     /// </summary>
     public static readonly Board StartPosition;
     /// <summary>
-    /// Minimal compabile version of native rsmc library.
+    /// Minimal compatible version of the native rsmc library.
     /// </summary>
+    /// <remarks>
+    /// The native library is accepted if its version is not lower than this value
+    /// and its major version is equal to the major version of this value.
+    /// </remarks>
     public static readonly Version MinimalVersion = new(1, 0, 0);
 
     /// <summary>
-    /// Returns version of native rsmc library.
+    /// Gets the version of the native rsmc library.
     /// </summary>
+    /// <remarks>
+    /// The version is decoded from the <see cref="uint"/> returned by the native <c>rsmc_version</c> function.
+    /// </remarks>
     public static Version RsmcVersion
     {
         get
@@ -79,9 +92,12 @@ public static partial class Rsmc
     private static partial GameState rsmc_get_game_state(Board board);
 
     /// <summary>
-    /// Returns the initial position of Reversi.
+    /// Gets the initial position of Reversi.
     /// </summary>
-    /// <returns>Returns the initial position of Reversi.</returns>
+    /// <remarks>
+    /// Returns the cached <see cref="StartPosition"/> value.
+    /// </remarks>
+    /// <returns>A <see cref="Board"/> with the standard starting position.</returns>
     public static Board GetStartPosition()
     {
         return StartPosition;
@@ -90,20 +106,24 @@ public static partial class Rsmc
     /// <summary>
     /// Applies a move to the board for the specified player.
     /// </summary>
-    /// <param name="board">Current <see cref="Board"/></param>
-    /// <param name="move">The target <see cref="BitMask"/> for the move.</param>
+    /// <remarks>
+    /// This wrapper does not validate the move. Call <see cref="IsMoveValid"/> first;
+    /// the result for an invalid move is determined by the native library.
+    /// </remarks>
+    /// <param name="board">The <see cref="Board"/> on which to apply the move.</param>
+    /// <param name="move">The <see cref="BitMask"/> of the cell to place a disc on.</param>
     /// <param name="player">The <see cref="Player"/> making the move.</param>
-    /// <returns>New <see cref="Board"/>.</returns>
+    /// <returns>A new <see cref="Board"/> with the move applied. The original board is not modified.</returns>
     public static Board ApplyMove(Board board, BitMask move, Player player)
     {
         return rsmc_apply_move(board, move, player);
     }
 
     /// <summary>
-    /// Calculates and retrieves the current score for both players.
+    /// Calculates the current score of both players.
     /// </summary>
     /// <param name="board">The <see cref="Board"/> to evaluate.</param>
-    /// <returns>A <see cref="PlayersScore"/> object containing the current scores.</returns>
+    /// <returns>A <see cref="PlayersScore"/> containing the score of each player.</returns>
     public static PlayersScore GetPlayersScore(Board board)
     {
         return rsmc_get_players_score(board);
@@ -113,7 +133,7 @@ public static partial class Rsmc
     /// Determines whether a proposed move is valid for the specified player.
     /// </summary>
     /// <param name="board">The <see cref="Board"/> to check.</param>
-    /// <param name="move">The target <see cref="BitMask"/> of the proposed move.</param>
+    /// <param name="move">The <see cref="BitMask"/> of the cell of the proposed move.</param>
     /// <param name="player">The <see cref="Player"/> attempting the move.</param>
     /// <returns><c>true</c> if the move is valid; otherwise, <c>false</c>.</returns>
     public static bool IsMoveValid(Board board, BitMask move, Player player)
@@ -126,7 +146,7 @@ public static partial class Rsmc
     /// </summary>
     /// <param name="board">The <see cref="Board"/> to analyze.</param>
     /// <param name="player">The <see cref="Player"/> whose valid moves to retrieve.</param>
-    /// <returns>A <see cref="BitMap"/> containing all legal moves.</returns>
+    /// <returns>A <see cref="BitMap"/> with a bit set for every cell where the player can make a legal move.</returns>
     public static BitMap GetValidMoves(Board board, Player player)
     {
         return rsmc_get_valid_moves(board, player);
@@ -136,7 +156,7 @@ public static partial class Rsmc
     /// Gets the current state of the game.
     /// </summary>
     /// <param name="board">The <see cref="Board"/> to inspect.</param>
-    /// <returns>The current <see cref="GameState"/> of the game.</returns>
+    /// <returns>The <see cref="GameState"/> (score and status) for the given board.</returns>
     public static GameState GetGameState(Board board)
     {
         return rsmc_get_game_state(board);

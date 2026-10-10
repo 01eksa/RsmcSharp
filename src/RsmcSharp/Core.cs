@@ -4,58 +4,65 @@ using System.Runtime.InteropServices;
 namespace RsmcSharp;
 
 /// <summary>
-/// Struct that represents RsmcBitMap from native library.
+/// Set of board cells stored as a 64-bit integer. Mirrors <c>RsmcBitMap</c> from the native library.
 /// </summary>
 /// <remarks>
-/// Constructor from ulong.
+/// Bit <c>i</c> corresponds to the cell with <c>x = i % <see cref="Board.Size"/></c> and
+/// <c>y = i / <see cref="Board.Size"/></c>, so cell (0, 0) is the least significant bit.
+/// Unlike <see cref="BitMask"/>, which normally marks a single cell, a <see cref="BitMap"/> may contain any number of cells.
 /// </remarks>
-/// <param name="bitmap">ulong that represents bit map.</param>
+/// <param name="bitmap">Bit map stored as <see cref="ulong"/>.</param>
 [StructLayout(LayoutKind.Sequential)]
 public struct BitMap(ulong bitmap)
 {
     /// <summary>
-    /// Bit map stored as ulong.
+    /// Bit map stored as <see cref="ulong"/>.
     /// </summary>
     public ulong Value { get; set; } = bitmap;
 
     /// <summary>
-    /// Implicit conversion to ulong.
+    /// Implicit conversion to <see cref="ulong"/>.
     /// </summary>
-    /// <param name="bitmap">BitMap to convert.</param>
+    /// <param name="bitmap"><see cref="BitMap"/> to convert.</param>
     public static implicit operator ulong(BitMap bitmap) => bitmap.Value;
     /// <summary>
-    /// Implicit conversion from ulong.
+    /// Implicit conversion from <see cref="ulong"/>.
     /// </summary>
-    /// <param name="bitmap">Bit map stored as ulong.</param>
+    /// <param name="bitmap">Bit map stored as <see cref="ulong"/>.</param>
     public static implicit operator BitMap(ulong bitmap) => new(bitmap);
 }
 
 /// <summary>
-/// Struct that represents RsmcBitMask from native library.
+/// Mask that identifies a board cell (typically exactly one bit is set). Mirrors <c>RsmcBitMask</c> from the native library.
 /// </summary>
+/// <remarks>
+/// The bit layout is the same as in <see cref="BitMap"/>: the bit index of a cell is <c>y * <see cref="Board.Size"/> + x</c>.
+/// </remarks>
 [StructLayout(LayoutKind.Sequential)]
 public readonly struct BitMask
 {
     /// <summary>
-    /// Bit mask stored as ulong.
+    /// Bit mask stored as <see cref="ulong"/>.
     /// </summary>
     public ulong Value { get; init; }
 
     /// <summary>
-    /// Creates BitMask from ulong.
+    /// Creates a <see cref="BitMask"/> from a raw <see cref="ulong"/> value. The value is not validated.
     /// </summary>
-    /// <param name="mask">Bit mask stored as ulong.</param>
+    /// <param name="mask">Bit mask stored as <see cref="ulong"/>.</param>
     public BitMask(ulong mask)
     {
         Value = mask;
     }
 
     /// <summary>
-    /// Creates BitMask from coordinates.
+    /// Creates a <see cref="BitMask"/> with a single bit set for the cell at the given coordinates.
     /// </summary>
-    /// <param name="x"> x (column). </param>
-    /// <param name="y"> y (row). </param>
-    /// <exception cref="InvalidCoordsException"> Coords are out of range. </exception>
+    /// <param name="x">Column (X coordinate).</param>
+    /// <param name="y">Row (Y coordinate).</param>
+    /// <exception cref="InvalidCoordsException">
+    /// <paramref name="x"/> or <paramref name="y"/> is outside <see cref="Board.MinCoord"/>..<see cref="Board.MaxCoord"/>.
+    /// </exception>
     public BitMask(int x, int y)
     {
         if ((uint)y > Board.MaxCoord || (uint)x > Board.MaxCoord)
@@ -64,53 +71,53 @@ public readonly struct BitMask
         Value = 1ul << index;
     }
     /// <summary>
-    /// Implicit conversion to ulong.
+    /// Implicit conversion to <see cref="ulong"/>.
     /// </summary>
-    /// <param name="mask">BitMask to convert.</param>
+    /// <param name="mask"><see cref="BitMask"/> to convert.</param>
     public static implicit operator ulong(BitMask mask) => mask.Value;
     /// <summary>
-    /// Implicit conversion from ulong.
+    /// Implicit conversion from <see cref="ulong"/>.
     /// </summary>
-    /// <param name="value">Bit mask stored as ulong.</param>
+    /// <param name="value">Bit mask stored as <see cref="ulong"/>.</param>
     public static implicit operator BitMask(ulong value) => new(value);
 }
 
 /// <summary>
-/// Represents players color.
+/// Represents a player's color.
 /// </summary>
 public enum Player : byte
 {
     /// <summary>
-    /// Represents black player.
+    /// Black player.
     /// </summary>
     Black = 0,
 
     /// <summary>
-    /// Represents white player.
+    /// White player.
     /// </summary>
     White = 1,
 }
 
 /// <summary>
-/// Extensions for <see cref="Player"/>
+/// Extensions for <see cref="Player"/>.
 /// </summary>
 public static class PlayerExtensions
 {
     extension(Player player)
     {
         /// <summary>
-        /// Returns opposite color.
+        /// Returns the opposite player.
         /// </summary>
-        /// <returns>Opposite color.</returns>
+        /// <returns><see cref="Player.White"/> for <see cref="Player.Black"/> and vice versa.</returns>
         public Player Opposite()
         {
             return (Player)(((byte)player + 1) % 2);
         }
 
         /// <summary>
-        /// Returns BoardCell with player's color.
+        /// Returns the <see cref="BoardCell"/> that holds this player's disc.
         /// </summary>
-        /// <returns><see cref="BoardCell"/> with player's color.</returns>
+        /// <returns><see cref="BoardCell.Black"/> for <see cref="Player.Black"/>, <see cref="BoardCell.White"/> for <see cref="Player.White"/>.</returns>
         public BoardCell ToCell()
         {
             return (BoardCell)((byte)player + 1);
@@ -119,7 +126,7 @@ public static class PlayerExtensions
 }
 
 /// <summary>
-/// Represents game status.
+/// Represents the game status.
 /// </summary>
 public enum GameStatus : byte
 {
@@ -129,23 +136,23 @@ public enum GameStatus : byte
     Continue = 0,
 
     /// <summary>
-    /// Game is finished by draw.
+    /// Game ended in a draw.
     /// </summary>
     Draw = 1,
 
     /// <summary>
-    /// Black player wins.
+    /// Game ended with a win for the black player.
     /// </summary>
     BlackWin = 2,
 
     /// <summary>
-    /// White player wins.
+    /// Game ended with a win for the white player.
     /// </summary>
     WhiteWin = 3,
 }
 
 /// <summary>
-/// Represents cell on the board.
+/// Represents the contents of a board cell.
 /// </summary>
 public enum BoardCell : byte
 {
@@ -155,46 +162,51 @@ public enum BoardCell : byte
     Empty = 0,
 
     /// <summary>
-    /// Cell contains black disk.
+    /// Cell contains a black disc.
     /// </summary>
     Black = 1,
 
     /// <summary>
-    /// Cell contains white disk.
+    /// Cell contains a white disc.
     /// </summary>
     White = 2,
 }
 
 /// <summary>
-/// Contains players score.
+/// Contains the score of both players.
 /// </summary>
-/// <param name="BlackScore">Black player score.</param>
-/// <param name="WhiteScore">White player score.</param>
+/// <param name="BlackScore">Black player's score (number of black discs).</param>
+/// <param name="WhiteScore">White player's score (number of white discs).</param>
 [StructLayout(LayoutKind.Sequential)]
 public record struct PlayersScore(byte BlackScore, byte WhiteScore);
 
 /// <summary>
-/// Represents game state (score + status).
+/// Represents the game state: score and status.
 /// </summary>
-/// <param name="Score"><see cref="PlayersScore"/></param>
-/// <param name="GameStatus"><see cref="GameStatus"/></param>
+/// <param name="Score">Current score of both players.</param>
+/// <param name="GameStatus">Current status of the game.</param>
 [StructLayout(LayoutKind.Sequential)]
 public record struct GameState(PlayersScore Score, GameStatus GameStatus);
 
 /// <summary>
-/// Represents coords on the board.
-/// Can be negative. + and - operators accepted.
+/// Represents a position or an offset on the board.
 /// </summary>
-/// <param name="X">X coord.</param>
-/// <param name="Y">Y coord.</param>
+/// <remarks>
+/// <see cref="X"/> is the column and <see cref="Y"/> is the row.
+/// Values may be negative or outside the board (e.g. when used as direction offsets).
+/// The <c>+</c> and <c>-</c> operators operate component-wise and truncate the result to <see cref="sbyte"/>
+/// without overflow checks (unless the project is compiled with <c>checked</c>).
+/// </remarks>
+/// <param name="X">X coordinate (column).</param>
+/// <param name="Y">Y coordinate (row).</param>
 [StructLayout(LayoutKind.Sequential)]
 public record struct Coords(sbyte X, sbyte Y)
 {
     /// <summary>
-    /// Adds two <see cref="Coords"/> instances together component-wise.
+    /// Adds two <see cref="Coords"/> instances component-wise.
     /// </summary>
-    /// <param name="left">The first coordinate or base position.</param>
-    /// <param name="right">The second coordinate or offset to add.</param>
+    /// <param name="left">The base position.</param>
+    /// <param name="right">The offset to add.</param>
     /// <returns>A new <see cref="Coords"/> representing the sum of the two coordinates.</returns>
     public static Coords operator +(Coords left, Coords right)
     {
@@ -204,8 +216,8 @@ public record struct Coords(sbyte X, sbyte Y)
     /// <summary>
     /// Subtracts one <see cref="Coords"/> instance from another component-wise.
     /// </summary>
-    /// <param name="left">The base coordinate or target position.</param>
-    /// <param name="right">The coordinate or offset to subtract.</param>
+    /// <param name="left">The base position.</param>
+    /// <param name="right">The offset to subtract.</param>
     /// <returns>A new <see cref="Coords"/> representing the difference between the two coordinates.</returns>
     public static Coords operator -(Coords left, Coords right)
     {
@@ -214,25 +226,32 @@ public record struct Coords(sbyte X, sbyte Y)
 }
 
 /// <summary>
-/// Represents game board.
+/// Represents the game board.
 /// </summary>
+/// <remarks>
+/// The board is stored as two <see cref="BitMap"/> values (black and white discs).
+/// Bit <c>y * <see cref="Size"/> + x</c> corresponds to the cell at column <c>x</c> and row <c>y</c>.
+/// </remarks>
 [StructLayout(LayoutKind.Sequential)]
 public record struct Board
 {
     /// <summary>
-    /// BitMap that stores black pieces.
+    /// <see cref="BitMap"/> that stores black discs.
     /// </summary>
     public BitMap Black { get; init; }
     /// <summary>
-    /// BitMap that stores white pieces.
+    /// <see cref="BitMap"/> that stores white discs.
     /// </summary>
     public BitMap White { get; init; }
 
     /// <summary>
-    /// Creates Board from two BitMap.
+    /// Creates a <see cref="Board"/> from two bit maps.
     /// </summary>
-    /// <param name="black">BitMap that stores black pieces.</param>
-    /// <param name="white">BitMap that stores white pieces.</param>
+    /// <remarks>
+    /// The bit maps are not validated; they are expected not to overlap.
+    /// </remarks>
+    /// <param name="black"><see cref="BitMap"/> that stores black discs.</param>
+    /// <param name="white"><see cref="BitMap"/> that stores white discs.</param>
     public Board(BitMap black, BitMap white)
     {
         Black = black;
@@ -240,10 +259,13 @@ public record struct Board
     }
 
     /// <summary>
-    /// Creates Board from BoardCell 2-dim array.
+    /// Creates a <see cref="Board"/> from a two-dimensional array of cells.
     /// </summary>
-    /// <param name="cells">Cells that represents board.</param>
-    /// <exception cref="ArgumentOutOfRangeException">One of dimensions doesn't match size.</exception>
+    /// <param name="cells">
+    /// Cells of the board, indexed as <c>[row, column]</c> (that is, <c>[y, x]</c>).
+    /// Both dimensions must be equal to <see cref="Size"/>.
+    /// </param>
+    /// <exception cref="ArgumentOutOfRangeException">One of the dimensions doesn't match <see cref="Size"/>.</exception>
     public Board(BoardCell[,] cells)
     {
         if (cells.GetLength(0) != Size || cells.GetLength(1) != Size)
@@ -279,7 +301,7 @@ public record struct Board
     }
 
     /// <summary>
-    /// One dimesion size.
+    /// Number of rows and columns of the board.
     /// </summary>
     public const int Size = 8;
 
@@ -289,21 +311,22 @@ public record struct Board
     public const int Area = Size * Size;
 
     /// <summary>
-    /// Min coord.
+    /// Minimum valid coordinate (inclusive).
     /// </summary>
     public const int MinCoord = 0;
 
     /// <summary>
-    /// Max coord.
+    /// Maximum valid coordinate (inclusive).
     /// </summary>
     public const int MaxCoord = MinCoord + Size - 1 - MinCoord;
 
     /// <summary>
-    /// Returns <see cref="BoardCell"/> on given coords.
+    /// Gets the cell at the given row and column.
     /// </summary>
-    /// <param name="row">Y coord.</param>
-    /// <param name="col">X coord.</param>
-    /// <exception cref="InvalidCoordsException">Throws if any coord is out of range <see cref="MinCoord"/>..<see cref="MaxCoord"/></exception>
+    /// <param name="row">Row (Y coordinate).</param>
+    /// <param name="col">Column (X coordinate).</param>
+    /// <returns>Contents of the cell: <see cref="BoardCell.Black"/>, <see cref="BoardCell.White"/> or <see cref="BoardCell.Empty"/>.</returns>
+    /// <exception cref="InvalidCoordsException">Thrown if any coordinate is outside <see cref="MinCoord"/>..<see cref="MaxCoord"/>.</exception>
     public readonly BoardCell this[int row, int col]
     {
         get
@@ -325,17 +348,22 @@ public record struct Board
     }
 
     /// <summary>
-    /// Returns <see cref="BoardCell"/> on given coords.
+    /// Gets the cell at the given coordinates.
     /// </summary>
-    /// <param name="coords"><see cref="Coords"/></param>
-    /// <exception cref="InvalidCoordsException">Throws if any coord is out of range <see cref="MinCoord"/>..<see cref="MaxCoord"/></exception>
+    /// <param name="coords">Position of the cell (<see cref="Coords.X"/> is the column, <see cref="Coords.Y"/> is the row).</param>
+    /// <returns>Contents of the cell: <see cref="BoardCell.Black"/>, <see cref="BoardCell.White"/> or <see cref="BoardCell.Empty"/>.</returns>
+    /// <exception cref="InvalidCoordsException">Thrown if any coordinate is outside <see cref="MinCoord"/>..<see cref="MaxCoord"/>.</exception>
     public BoardCell this[Coords coords] => this[coords.Y, coords.X];
 }
 
 /// <summary>
-/// Represents native rsmc library version.
+/// Represents the native rsmc library version.
 /// </summary>
-/// <param name="Encoded">Version packed into uint.</param>
+/// <remarks>
+/// The version is packed into a single <see cref="uint"/> as <c>(Major &lt;&lt; 24) | (Minor &lt;&lt; 16) | Patch</c>,
+/// so versions are compared by comparing the encoded values.
+/// </remarks>
+/// <param name="Encoded">Version packed into <see cref="uint"/>.</param>
 public record struct Version(uint Encoded)
 {
     /// <summary>
@@ -352,7 +380,7 @@ public record struct Version(uint Encoded)
     public readonly ushort Patch => (ushort)Encoded;
 
     /// <summary>
-    /// Creates <see cref="Version"/> from Major-Minor-Patch values.
+    /// Creates a <see cref="Version"/> from Major, Minor and Patch values.
     /// </summary>
     /// <param name="Major">Major version.</param>
     /// <param name="Minor">Minor version.</param>
@@ -360,51 +388,51 @@ public record struct Version(uint Encoded)
     public Version(byte Major, byte Minor, ushort Patch) : this(((uint)Major << 24) | ((uint)Minor << 16) | (uint)Patch) {}
 
     /// <summary>
-    /// Compares two versions of rsmc library.
+    /// Determines whether the left version is lower than the right one.
     /// </summary>
     /// <param name="left">Left operand.</param>
     /// <param name="right">Right operand.</param>
-    /// <returns>True if right operand is greater, else false.</returns>
+    /// <returns><c>true</c> if <paramref name="left"/> is lower than <paramref name="right"/>; otherwise, <c>false</c>.</returns>
     public static bool operator <(Version left, Version right)
     {
         return left.Encoded < right.Encoded;
     }
 
     /// <summary>
-    /// Compares two versions of rsmc library.
+    /// Determines whether the left version is lower than or equal to the right one.
     /// </summary>
     /// <param name="left">Left operand.</param>
     /// <param name="right">Right operand.</param>
-    /// <returns>True if right operand is greater or equal, else false.</returns>
+    /// <returns><c>true</c> if <paramref name="left"/> is lower than or equal to <paramref name="right"/>; otherwise, <c>false</c>.</returns>
     public static bool operator <=(Version left, Version right)
     {
         return left.Encoded <= right.Encoded;
     }
 
     /// <summary>
-    /// Compares two versions of rsmc library.
+    /// Determines whether the left version is greater than the right one.
     /// </summary>
     /// <param name="left">Left operand.</param>
     /// <param name="right">Right operand.</param>
-    /// <returns>True if left operand is greater, else false.</returns>
+    /// <returns><c>true</c> if <paramref name="left"/> is greater than <paramref name="right"/>; otherwise, <c>false</c>.</returns>
     public static bool operator >(Version left, Version right)
     {
         return left.Encoded > right.Encoded;
     }
 
     /// <summary>
-    /// Compares two versions of rsmc library.
+    /// Determines whether the left version is greater than or equal to the right one.
     /// </summary>
     /// <param name="left">Left operand.</param>
     /// <param name="right">Right operand.</param>
-    /// <returns>True if left operand is greater or equal, else false.</returns>
+    /// <returns><c>true</c> if <paramref name="left"/> is greater than or equal to <paramref name="right"/>; otherwise, <c>false</c>.</returns>
     public static bool operator >=(Version left, Version right)
     {
         return left.Encoded >= right.Encoded;
     }
 
     /// <summary>
-    /// Converts version to human-readeble tag in format vMAJOR.MINOR.PATCH
+    /// Converts the version to a human-readable tag in the format <c>vMAJOR.MINOR.PATCH</c>.
     /// </summary>
     /// <returns>Human-readable version tag.</returns>
     public override readonly string ToString() => $"v{Major}.{Minor}.{Patch}";
